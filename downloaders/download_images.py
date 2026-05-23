@@ -37,27 +37,49 @@ def parse_args(args):
 
 
 def load_progress(progress_path):
-    completed = set()
     failed = set()
     if os.path.exists(progress_path):
         with open(progress_path, encoding="utf-8") as f:
             for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                parts = line.split()
-                if len(parts) >= 2:
-                    gid, status = parts[0], parts[1]
-                    if status == "OK":
-                        completed.add(gid)
-                    elif status == "FAIL":
-                        failed.add(gid)
-    return completed, failed
+                gid = line.strip()
+                if gid:
+                    failed.add(gid)
+    return failed
 
 
-def append_progress(progress_path, global_id, status):
+def append_progress(progress_path, global_id):
     with open(progress_path, "a", encoding="utf-8") as f:
-        f.write(f"{global_id} {status}\n")
+        f.write(f"{global_id}\n")
+
+
+def remove_progress(progress_path, global_id):
+    if not os.path.exists(progress_path):
+        return
+    lines = []
+    with open(progress_path, encoding="utf-8") as f:
+        for line in f:
+            if line.strip() != global_id:
+                lines.append(line)
+    with open(progress_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+
+EXTS = [".jpg", ".png", ".jpeg", ".webp"]
+
+
+def detect_ext(image_url):
+    url_lower = image_url.lower()
+    for ext in [".png", ".jpeg", ".webp", ".jpg"]:
+        if ext in url_lower:
+            return ext
+    return ".jpg"
+
+
+def image_exists(code, global_id, image_url):
+    category_dir = global_id[6:11]
+    dir_path = os.path.join(STORE_DIR, "images", code, category_dir)
+    ext = detect_ext(image_url)
+    return os.path.exists(os.path.join(dir_path, f"{global_id}{ext}"))
 
 
 def download_one(code, global_id, image_url):
@@ -65,15 +87,7 @@ def download_one(code, global_id, image_url):
     dir_path = os.path.join(STORE_DIR, "images", code, category_dir)
     os.makedirs(dir_path, exist_ok=True)
 
-    ext = ".jpg"
-    url_lower = image_url.lower()
-    if ".png" in url_lower:
-        ext = ".png"
-    elif ".jpeg" in url_lower:
-        ext = ".jpeg"
-    elif ".webp" in url_lower:
-        ext = ".webp"
-
+    ext = detect_ext(image_url)
     filepath = os.path.join(dir_path, f"{global_id}{ext}")
 
     if os.path.exists(filepath):
@@ -112,22 +126,24 @@ def download_museum(code):
             rows.append(row)
 
     total = len(rows)
-    completed, failed = load_progress(progress_path)
-    done_before = len(completed) + len(failed)
+    failed_set = load_progress(progress_path)
 
     pending = [
         r
         for r in rows
-        if r["global_id"] not in completed and r["global_id"] not in failed
+        if not image_exists(code, r["global_id"], r.get("image_url", ""))
     ]
 
     ok_count = 0
     fail_count = 0
     fail_streak = 0
-    last_gid = max(completed) if completed else ""
+    last_gid = ""
 
     if pending:
-        print(f"[{code}] 总数={total} 已处理={done_before} 本次待处理={len(pending)}")
+        remained = total - len(pending)
+        print(
+            f"[{code}] 总数={total} 本地已存在={remained} 本次待处理={len(pending)}"
+        )
     else:
         print(f"[{code}] 全部完成 ({total} 行)")
 
@@ -136,7 +152,7 @@ def download_museum(code):
         image_url = row.get("image_url", "").strip()
 
         if not image_url:
-            append_progress(progress_path, global_id, "FAIL")
+            append_progress(progress_path, global_id)
             fail_count += 1
             fail_streak += 1
             if fail_streak >= MAX_FAIL_STREAK:
@@ -144,15 +160,18 @@ def download_museum(code):
                 break
             continue
 
+        is_retry = global_id in failed_set
         success = download_one(code, global_id, image_url)
 
         if success:
-            append_progress(progress_path, global_id, "OK")
+            if is_retry:
+                remove_progress(progress_path, global_id)
             ok_count += 1
             fail_streak = 0
             last_gid = str(global_id) if global_id else last_gid
         else:
-            append_progress(progress_path, global_id, "FAIL")
+            if not is_retry:
+                append_progress(progress_path, global_id)
             fail_count += 1
             fail_streak += 1
             if fail_streak >= MAX_FAIL_STREAK:
@@ -171,8 +190,8 @@ def download_museum(code):
     return {
         "code": code,
         "total": total,
-        "ok": len(completed) + ok_count,
-        "fail": len(failed) + fail_count,
+        "ok": ok_count,
+        "fail": fail_count,
         "last": last_gid,
     }
 
