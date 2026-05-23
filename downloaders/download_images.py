@@ -183,6 +183,9 @@ def download_museum(code):
                 f"  [{code}] 进度: {idx}/{len(pending)}, OK={ok_count}, FAIL={fail_count}"
             )
 
+        if idx % 100 == 0:
+            update_summary(code, total, ok_count, fail_count, last_gid)
+
         time.sleep(random.uniform(0.5, 3))
 
     print(f"[{code}] 完成. 本次 OK={ok_count} FAIL={fail_count}")
@@ -194,6 +197,22 @@ def download_museum(code):
         "fail": fail_count,
         "last": last_gid,
     }
+
+
+def update_summary(code, total, ok_count, fail_count, last_gid):
+    path = os.path.join(STORE_DIR, "summary.json")
+    summary = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            summary = json.load(f)
+    summary[code] = {
+        "total": total,
+        "ok": ok_count,
+        "fail": fail_count,
+        "last": last_gid,
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
 
 
 def write_summary(results):
