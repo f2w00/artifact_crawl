@@ -8,20 +8,20 @@ import yt_dlp
 
 # ===================== 路径配置 =====================
 
-#  opera 项目根目录
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 项目根目录
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 你的 jsonl 文件：opera/links/bili_opera.jsonl
-JSONL_FILE = os.path.join(BASE_DIR, "/downloaders/links", "bili_opera.jsonl")
+# 搜索结果的 JSONL
+JSONL_FILE = os.path.join(BASE_DIR, "output", "video_search", "peking", "peking.jsonl")
 
-# B站 cookie 文件：opera/bili_cookie.txt
+# B站 cookie
 COOKIE_FILE = os.path.join(BASE_DIR, "bili_cookie.txt")
 
-# 下载保存目录：opera/output
-OUTPUT_ROOT = os.path.join(BASE_DIR, "output")
+# 视频下载根目录
+OUTPUT_ROOT = os.path.join(BASE_DIR, "output", "video_search", "peking")
 
-# 下载记录文件：opera/downloaded.json
-RECORD_FILE = os.path.join(BASE_DIR, "downloaded.json")
+# 下载记录
+RECORD_FILE = os.path.join(BASE_DIR, "output", "video_search", "peking", "downloaded.json")
 
 # 下载格式
 # 优先 720p，失败后自动降级到可用格式
