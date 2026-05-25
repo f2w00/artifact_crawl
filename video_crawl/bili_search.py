@@ -154,7 +154,7 @@ def main():
         print(f"错误: 调用 get_opera_meta() 失败: {e}")
         sys.exit(1)
 
-    OUTPUT_FILE = os.path.join(BASE_DIR, "output", "video_search", f"{module_id}.jsonl")
+    OUTPUT_FILE = os.path.join(BASE_DIR, "output", "video_search", module_id, f"{module_id}.jsonl")
 
     # 确保输出目录存在
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
