@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import sys
 import time
 from datetime import datetime
 
@@ -11,17 +12,13 @@ import yt_dlp
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# 搜索结果的 JSONL
-JSONL_FILE = os.path.join(BASE_DIR, "output", "video_search", "peking", "peking.jsonl")
-
 # B站 cookie
 COOKIE_FILE = os.path.join(BASE_DIR, "bili_cookie.txt")
 
-# 视频下载根目录
-OUTPUT_ROOT = os.path.join(BASE_DIR, "output", "video_search", "peking")
-
-# 下载记录
-RECORD_FILE = os.path.join(BASE_DIR, "output", "video_search", "peking", "downloaded.json")
+# 由 main() 中根据参数动态赋值
+JSONL_FILE = ""
+OUTPUT_ROOT = ""
+RECORD_FILE = ""
 
 # 下载格式
 # 优先 720p，失败后自动降级到可用格式
@@ -35,9 +32,6 @@ SLEEP_MIN = 10
 SLEEP_MAX = 30
 
 # ===================================================
-
-
-os.makedirs(OUTPUT_ROOT, exist_ok=True)
 
 
 def now_time():
@@ -56,7 +50,7 @@ def load_downloaded():
     return {}
 
 
-downloaded = load_downloaded()
+downloaded = {}
 
 
 def save_downloaded():
@@ -199,8 +193,26 @@ def download_video(opera_id, opera_name, bvid, url):
 
 
 def main():
+    if len(sys.argv) < 2:
+        print("用法: python downloaders/bili_download.py <模块名>")
+        print("示例: python downloaders/bili_download.py peking")
+        sys.exit(1)
+
+    module = sys.argv[1]
+
+    global JSONL_FILE, OUTPUT_ROOT, RECORD_FILE
+    VIDEO_DIR = os.path.join(BASE_DIR, "output", "video_search", module)
+    JSONL_FILE = os.path.join(VIDEO_DIR, f"{module}.jsonl")
+    OUTPUT_ROOT = VIDEO_DIR
+    RECORD_FILE = os.path.join(VIDEO_DIR, f"{module}_downloaded.json")
+
+    os.makedirs(OUTPUT_ROOT, exist_ok=True)
+
+    global downloaded
+    downloaded = load_downloaded()
+
     print("========================================")
-    print("🎬 B站京剧视频批量下载任务开始")
+    print(f"🎬 B站戏曲视频批量下载: {module}")
     print("========================================")
     print(f"项目根目录：{BASE_DIR}")
     print(f"JSONL 文件：{JSONL_FILE}")
