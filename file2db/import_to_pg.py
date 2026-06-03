@@ -1,17 +1,20 @@
 import csv
-import json
-import sys
-import os
 import glob
+import json
+import os
+import sys
 
 import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_CONFIG = dict(
-    host="10.15.22.91",
-    port=5432,
-    user="hhj",
-    password="hhj314",
-    dbname="artifacts",
+    host=os.getenv("DB_HOST"),
+    port=int(os.getenv("DB_PORT", "5432")),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    dbname=os.getenv("DB_NAME"),
 )
 
 DIR = os.path.dirname(__file__)
@@ -47,14 +50,7 @@ def main():
 
     print(f"Reading: {[os.path.basename(f) for f in files]}")
 
-
-    conn = psycopg2.connect(
-        host="10.15.22.91",
-        port=5432,
-        user="hhj",
-        password="hhj314",
-        dbname="artifacts",
-)
+    conn = psycopg2.connect(**DB_CONFIG)  # pyright: ignore[reportCallIssue, reportArgumentType]
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS artifacts_raw (

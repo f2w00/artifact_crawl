@@ -13,3 +13,7 @@ wheels/
 /links
 /store
 /scripts
+/file2db/**/**.json
+/file2db/**/**.jsonl
+/file2db/**/**.jsonc
+.env
