@@ -1,7 +1,6 @@
 import json
 import os
 import random
-import sys
 import time
 from datetime import datetime
 
@@ -9,16 +8,20 @@ import yt_dlp
 
 # ===================== 路径配置 =====================
 
-# 项目根目录
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+#  opera 项目根目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# B站 cookie
+# 你的 jsonl 文件：opera/links/bili_opera.jsonl
+JSONL_FILE = os.path.join(BASE_DIR, "/downloaders/links", "bili_opera.jsonl")
+
+# B站 cookie 文件：opera/bili_cookie.txt
 COOKIE_FILE = os.path.join(BASE_DIR, "bili_cookie.txt")
 
-# 由 main() 中根据参数动态赋值
-JSONL_FILE = ""
-OUTPUT_ROOT = ""
-RECORD_FILE = ""
+# 下载保存目录：opera/output
+OUTPUT_ROOT = os.path.join(BASE_DIR, "output")
+
+# 下载记录文件：opera/downloaded.json
+RECORD_FILE = os.path.join(BASE_DIR, "downloaded.json")
 
 # 下载格式
 # 优先 720p，失败后自动降级到可用格式
@@ -32,6 +35,9 @@ SLEEP_MIN = 10
 SLEEP_MAX = 30
 
 # ===================================================
+
+
+os.makedirs(OUTPUT_ROOT, exist_ok=True)
 
 
 def now_time():
@@ -50,7 +56,7 @@ def load_downloaded():
     return {}
 
 
-downloaded = {}
+downloaded = load_downloaded()
 
 
 def save_downloaded():
@@ -65,28 +71,21 @@ def build_ydl_opts(output_template):
         "format": FORMAT,
         "outtmpl": output_template,
         "merge_output_format": "mp4",
-
         # 不下载播放列表，只下载当前视频
         "noplaylist": True,
-
         # 已存在文件不覆盖
         "nooverwrites": True,
-
         # 断点续传
         "continuedl": True,
-
         # yt-dlp 内部重试
         "retries": 5,
         "fragment_retries": 5,
         "extractor_retries": 3,
-
         # 网络超时
         "socket_timeout": 30,
-
         # 输出信息
         "quiet": False,
         "no_warnings": False,
-
         # 遇到错误抛出，方便记录 failed
         "ignoreerrors": False,
     }
@@ -127,7 +126,7 @@ def download_video(opera_id, opera_name, bvid, url):
         try:
             print(f"   第 {attempt}/{MAX_RETRIES} 次尝试下载...")
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # pyright: ignore[reportArgumentType]
                 info = ydl.extract_info(url, download=True)
 
             title = ""
@@ -148,7 +147,7 @@ def download_video(opera_id, opera_name, bvid, url):
                 "title": title,
                 "duration": duration,
                 "uploader": uploader,
-                "timestamp": now_time()
+                "timestamp": now_time(),
             }
             save_downloaded()
 
@@ -171,7 +170,7 @@ def download_video(opera_id, opera_name, bvid, url):
                 "bvid": bvid,
                 "url": url,
                 "error": error_msg,
-                "timestamp": now_time()
+                "timestamp": now_time(),
             }
             save_downloaded()
 
@@ -193,26 +192,8 @@ def download_video(opera_id, opera_name, bvid, url):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("用法: python downloaders/bili_download.py <模块名>")
-        print("示例: python downloaders/bili_download.py peking")
-        sys.exit(1)
-
-    module = sys.argv[1]
-
-    global JSONL_FILE, OUTPUT_ROOT, RECORD_FILE
-    VIDEO_DIR = os.path.join(BASE_DIR, "output", "video_search", module)
-    JSONL_FILE = os.path.join(VIDEO_DIR, f"{module}.jsonl")
-    OUTPUT_ROOT = VIDEO_DIR
-    RECORD_FILE = os.path.join(VIDEO_DIR, f"{module}_downloaded.json")
-
-    os.makedirs(OUTPUT_ROOT, exist_ok=True)
-
-    global downloaded
-    downloaded = load_downloaded()
-
     print("========================================")
-    print(f"🎬 B站戏曲视频批量下载: {module}")
+    print("🎬 B站京剧视频批量下载任务开始")
     print("========================================")
     print(f"项目根目录：{BASE_DIR}")
     print(f"JSONL 文件：{JSONL_FILE}")
@@ -281,10 +262,7 @@ def main():
                 print(f"\n[{idx}/{len(videos)}] 当前视频：{opera_id}_{bvid}")
 
                 result = download_video(
-                    opera_id=opera_id,
-                    opera_name=opera_name,
-                    bvid=bvid,
-                    url=url
+                    opera_id=opera_id, opera_name=opera_name, bvid=bvid, url=url
                 )
 
                 if result == "success":
@@ -294,7 +272,7 @@ def main():
                 elif result == "skipped":
                     skipped_count += 1
 
-                if result=="success":
+                if result == "success":
                     sleep_time = random.uniform(SLEEP_MIN, SLEEP_MAX)
                     print(f"⏳ 等待 {sleep_time:.1f} 秒后继续...\n")
                     time.sleep(sleep_time)
